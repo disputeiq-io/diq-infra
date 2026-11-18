@@ -17,8 +17,16 @@ if (Test-Path $PidFile) {
         taskkill /PID $entry.Pid /T /F 2>$null | Out-Null
     }
     Remove-Item -Force $PidFile -ErrorAction SilentlyContinue
-} else {
-    Write-Host "No active PID file found at $PidFile."
+}
+
+# Also clear any orphaned listeners on DisputeIQ local ports
+foreach ($port in @(8080, 8081, 8082, 8087, 5173)) {
+    $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    foreach ($conn in $listeners) {
+        if ($conn.OwningProcess -gt 4) {
+            taskkill /PID $conn.OwningProcess /T /F 2>$null | Out-Null
+        }
+    }
 }
 
 if ($WithDocker) {

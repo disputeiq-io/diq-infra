@@ -17,11 +17,25 @@ Stop everything:
 .\scripts\stop-local.ps1
 ```
 
-## Option 2: Full Backing Stack (PostgreSQL 17 + pgvector, Redis, Kafka, MinIO, Keycloak)
+## Option 2: Full Backing Stack (PostgreSQL 16 + pgvector, Redis, Kafka, Schema Registry)
+
+Starts PostgreSQL (`pgvector/pgvector:pg16` on host port **`5433`** to avoid conflicting with any native Windows PostgreSQL on `5432`), Redis (`6379`), Apache Kafka + Zookeeper (`9092`), and Schema Registry (`8090`), then runs the microservices against PostgreSQL with full Row-Level Security (`V003__enable_postgres_rls.sql`):
 
 ```powershell
 Set-Location D:\Projects\disputeiq\diq-infra
 .\scripts\start-local.ps1 -WithDocker
+```
+
+To also start Keycloak OIDC on port `8180` (optional profile):
+
+```powershell
+docker compose -f .\docker\docker-compose.dev.yml --profile keycloak up -d
+```
+
+Stop everything:
+
+```powershell
+.\scripts\stop-local.ps1 -WithDocker
 ```
 
 ## Kind Cluster (Kubernetes + Istio Ambient)

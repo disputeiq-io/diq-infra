@@ -17,6 +17,16 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 # Ensure JDK 21 and Gradle 8.10.2 are ready
 & (Join-Path $Root "diq-standards\scripts\ensure-toolchain.ps1")
 
+# Clear any previous DisputeIQ listeners so every port binds cleanly
+foreach ($port in @(8080, 8081, 8082, 8087, 5173)) {
+    $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    foreach ($conn in $listeners) {
+        if ($conn.OwningProcess -gt 4) {
+            taskkill /PID $conn.OwningProcess /T /F 2>$null | Out-Null
+        }
+    }
+}
+
 if ($WithDocker) {
     Write-Host "Starting backing services via Docker Compose..."
     docker compose -f (Join-Path $Root "diq-infra\docker\docker-compose.dev.yml") up -d --wait
