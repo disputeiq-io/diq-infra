@@ -19,7 +19,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 if ($WithDocker) {
     Write-Host "Starting backing services via Docker Compose..."
-    docker compose -f (Join-Path $Root "diq-infra\docker\docker-compose.dev.yml") up -d
+    docker compose -f (Join-Path $Root "diq-infra\docker\docker-compose.dev.yml") up -d --wait
     $springProfile = "default"
 } else {
     Write-Host "Starting DisputeIQ in zero-Docker local profile (H2 PostgreSQL-compat + local JWT tokens)..."
