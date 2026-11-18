@@ -4,11 +4,17 @@ Local development infrastructure, `kind` cluster definitions, Keycloak realm con
 
 ## Option 1: One-Command Local Startup (No Docker Required)
 
-Starts `diq-tenant-service` (`8081`), `diq-dispute-service` (`8082`), `diq-gateway` (`8080`), `diq-network-simulator` (`8087`) using the `local` Spring profile (in-memory PostgreSQL-compatible H2 + local dev bearer tokens), and `diq-web` (`5173`):
+Starts `diq-tenant-service` (`8081`), `diq-dispute-service` (`8082`), `diq-document-service` (`8083`), `diq-notification-service` (`8086`), `diq-gateway` (`8080`), `diq-network-simulator` (`8087`) using the `local` Spring profile (in-memory PostgreSQL-compatible H2 + local dev bearer tokens), and `diq-web` (`5173`):
 
 ```powershell
 Set-Location D:\Projects\disputeiq\diq-infra
 .\scripts\start-local.ps1
+```
+
+Load sample multi-tenant disputes, PAN/PII-redacted evidence documents, outbox events, and DLQ replay demo data (`sample-data/sample-payloads.json`):
+
+```powershell
+.\scripts\seed-demo-data.ps1
 ```
 
 Stop everything:

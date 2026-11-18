@@ -1,0 +1,71 @@
+{
+  "tenants": {
+    "alpha": {
+      "tenantId": "11111111-1111-1111-1111-111111111111",
+      "token": "dev-token-alpha"
+    },
+    "beta": {
+      "tenantId": "22222222-2222-2222-2222-222222222222",
+      "token": "dev-token-beta"
+    }
+  },
+  "disputes": [
+    {
+      "tenantKey": "alpha",
+      "idempotencyKey": "demo-seed-alpha-case-1",
+      "payload": {
+        "externalReference": "VROL-DEMO-2026-1001",
+        "cardNetwork": "CARDNET_SYNTH",
+        "reasonCode": "10.4-CARD-ABSENT-FRAUD",
+        "amountCents": 48500,
+        "currency": "USD",
+        "merchantName": "CloudScale Hosting Co",
+        "cardholderClaim": "Cardholder denies authorizing recurring enterprise cloud renewal."
+      },
+      "transitionTargetState": "EVIDENCE_COLLECTION",
+      "evidence": [
+        {
+          "idempotencyKey": "demo-seed-alpha-doc-1",
+          "documentType": "RECEIPT",
+          "fileName": "cloudscale-receipt.txt",
+          "rawText": "Merchant: CloudScale Hosting Co\nOrder ID: ORD-2026-9042\nTracking: TRK-UPS-8841209\nTotal: $485.00 USD\nCard: 4111-1111-1111-1111\nContact: buyer@issuer-alpha.example | (415) 555-0199"
+        },
+        {
+          "idempotencyKey": "demo-seed-alpha-doc-2",
+          "documentType": "TRACKING",
+          "fileName": "ups-delivery-proof.txt",
+          "rawText": "Merchant: CloudScale Hosting Co\nOrder ID: ORD-2026-9042\nTracking: TRK-UPS-8841209\nDelivery Status: SIGNED_AT_FRONT_DESK"
+        }
+      ],
+      "dlqSimulation": {
+        "eventId": "demo-evt-alpha-dlq-1",
+        "topic": "document.evidence.extracted.v1",
+        "summary": "Evidence OCR completed for CloudScale receipt (PAN masked)",
+        "failureReason": "Simulated downstream webhook timeout"
+      }
+    },
+    {
+      "tenantKey": "beta",
+      "idempotencyKey": "demo-seed-beta-case-1",
+      "payload": {
+        "externalReference": "VROL-DEMO-2026-2001",
+        "cardNetwork": "CARDNET_SYNTH",
+        "reasonCode": "12.6-DUPLICATE-PROCESSING",
+        "amountCents": 74250,
+        "currency": "USD",
+        "merchantName": "Metro Transit Authority",
+        "cardholderClaim": "Single commuter pass purchase posted twice within 90 seconds."
+      },
+      "transitionTargetState": "EVIDENCE_COLLECTION",
+      "evidence": [
+        {
+          "idempotencyKey": "demo-seed-beta-doc-1",
+          "documentType": "CARDHOLDER_STATEMENT",
+          "fileName": "transit-statement.txt",
+          "rawText": "Merchant: Metro Transit Authority\nOrder ID: MTA-55210\nTotal: $742.50 USD\nCard: 5500-0000-0000-0004\nContact: commuter@acquirer-beta.example | 212-555-0144"
+        }
+      ],
+      "dlqSimulation": null
+    }
+  ]
+}

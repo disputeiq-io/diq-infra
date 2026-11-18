@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-    Starts the DisputeIQ local application stack (tenant, dispute, gateway, simulator, and web UI).
+    Starts the DisputeIQ local application stack (tenant, dispute, document, notification, gateway, simulator, and web UI).
 .PARAMETER WithDocker
-    Also starts PostgreSQL, Redis, Kafka, Apicurio, MinIO, and Keycloak via Docker Compose and connects services to PostgreSQL.
+    Also starts PostgreSQL, Redis, Kafka, Schema Registry (plus optional Keycloak profile) via Docker Compose and connects services to PostgreSQL.
 #>
 param(
     [switch]$WithDocker
@@ -18,14 +18,16 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 & (Join-Path $Root "diq-standards\scripts\ensure-toolchain.ps1")
 
 # Clear any previous DisputeIQ listeners so every port binds cleanly
-foreach ($port in @(8080, 8081, 8082, 8087, 5173)) {
+foreach ($port in @(8080, 8081, 8082, 8083, 8086, 8087, 5173)) {
     $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
     foreach ($conn in $listeners) {
         if ($conn.OwningProcess -gt 4) {
-            taskkill /PID $conn.OwningProcess /T /F 2>$null | Out-Null
+            Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue
+            cmd /c "taskkill /PID $($conn.OwningProcess) /T /F >nul 2>&1"
         }
     }
 }
+Start-Sleep -Milliseconds 500
 
 if ($WithDocker) {
     Write-Host "Starting backing services via Docker Compose..."
@@ -36,18 +38,22 @@ if ($WithDocker) {
     $springProfile = "local"
 }
 
-# Publish latest shared starter to mavenLocal
-Write-Host "Publishing diq-platform-libs to mavenLocal..."
-Push-Location (Join-Path $Root "diq-platform-libs")
-& .\gradlew.bat publishToMavenLocal --no-daemon -q
-Pop-Location
+# Publish latest shared libraries and schemas to mavenLocal
+foreach ($lib in @("diq-event-schemas", "diq-platform-libs")) {
+    Write-Host "Publishing $lib to mavenLocal..."
+    Push-Location (Join-Path $Root $lib)
+    & .\gradlew.bat publishToMavenLocal --no-daemon -q
+    Pop-Location
+}
 
 $started = @()
 $services = @(
-    @{ Name = "diq-tenant-service";    Port = 8081 }
-    @{ Name = "diq-dispute-service";   Port = 8082 }
-    @{ Name = "diq-gateway";           Port = 8080 }
-    @{ Name = "diq-network-simulator"; Port = 8087 }
+    @{ Name = "diq-tenant-service";       Port = 8081 }
+    @{ Name = "diq-dispute-service";      Port = 8082 }
+    @{ Name = "diq-document-service";     Port = 8083 }
+    @{ Name = "diq-notification-service"; Port = 8086 }
+    @{ Name = "diq-gateway";              Port = 8080 }
+    @{ Name = "diq-network-simulator";    Port = 8087 }
 )
 
 foreach ($svc in $services) {
@@ -88,11 +94,13 @@ $started | ConvertTo-Json | Set-Content -Path $PidFile -Encoding UTF8
 
 Write-Host "Waiting for health endpoints..."
 $endpoints = @(
-    @{ Name = "diq-tenant-service";    Url = "http://localhost:8081/actuator/health" }
-    @{ Name = "diq-dispute-service";   Url = "http://localhost:8082/actuator/health" }
-    @{ Name = "diq-gateway";           Url = "http://localhost:8080/actuator/health" }
-    @{ Name = "diq-network-simulator"; Url = "http://localhost:8087/actuator/health" }
-    @{ Name = "diq-web";               Url = "http://localhost:5173/" }
+    @{ Name = "diq-tenant-service";       Url = "http://localhost:8081/actuator/health" }
+    @{ Name = "diq-dispute-service";      Url = "http://localhost:8082/actuator/health" }
+    @{ Name = "diq-document-service";     Url = "http://localhost:8083/actuator/health" }
+    @{ Name = "diq-notification-service"; Url = "http://localhost:8086/actuator/health" }
+    @{ Name = "diq-gateway";              Url = "http://localhost:8080/actuator/health" }
+    @{ Name = "diq-network-simulator";    Url = "http://localhost:8087/actuator/health" }
+    @{ Name = "diq-web";                  Url = "http://localhost:5173/" }
 )
 
 foreach ($ep in $endpoints) {
@@ -117,10 +125,12 @@ foreach ($ep in $endpoints) {
 
 Write-Host ""
 Write-Host "DisputeIQ local stack is running:"
-Write-Host "  Web UI:            http://localhost:5173"
-Write-Host "  API Gateway:       http://localhost:8080"
-Write-Host "  Tenant Service:    http://localhost:8081"
-Write-Host "  Dispute Service:   http://localhost:8082"
-Write-Host "  Network Simulator: http://localhost:8087"
+Write-Host "  Web UI:               http://localhost:5173"
+Write-Host "  API Gateway:          http://localhost:8080"
+Write-Host "  Tenant Service:       http://localhost:8081"
+Write-Host "  Dispute Service:      http://localhost:8082"
+Write-Host "  Document Service:     http://localhost:8083"
+Write-Host "  Notification Service: http://localhost:8086"
+Write-Host "  Network Simulator:    http://localhost:8087"
 Write-Host "Logs: $LogDir"
 Write-Host "To stop: .\scripts\stop-local.ps1"
