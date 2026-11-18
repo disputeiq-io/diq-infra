@@ -4,7 +4,7 @@
 docker_compose('./docker/docker-compose.dev.yml')
 
 local_resource(
-    'check-jdk21-and-maven',
+    'check-jdk21-and-gradle',
     cmd='powershell -NoProfile -Command "& \'../diq-standards/scripts/ensure-toolchain.ps1\'"',
     labels=['toolchain'],
 )
