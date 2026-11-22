@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Seeds multi-tenant disputes, PAN/PII-redacted evidence documents, outbox/DLQ replays,
     hybrid RAG knowledge playbooks, and LangGraph4j AI triage recommendations via the local Gateway.
