@@ -1,6 +1,7 @@
 ﻿<#
 .SYNOPSIS
-    Seeds realistic multi-tenant disputes, PAN/PII-redacted evidence documents, outbox events, and DLQ replays via the local API Gateway.
+    Seeds multi-tenant disputes, PAN/PII-redacted evidence documents, outbox/DLQ replays,
+    hybrid RAG knowledge playbooks, and LangGraph4j AI triage recommendations via the local Gateway.
 #>
 param(
     [string]$GatewayUrl = "http://localhost:8080"
@@ -39,20 +40,35 @@ function Invoke-GatewayJson {
     return ($resp.Content | ConvertFrom-Json)
 }
 
-Write-Host "Seeding DisputeIQ sample data via $GatewayUrl ..."
+Write-Host "Seeding DisputeIQ Phase 1-4 sample data via $GatewayUrl ..."
+
+# 1. Ingest custom tenant knowledge playbooks (with PAN/PII redaction)
+foreach ($src in $Data.knowledgeSources) {
+    $tenant = $Data.tenants.($src.tenantKey)
+    $ingested = Invoke-GatewayJson -Method "POST" -Path "/api/v1/knowledge/sources" -Token $tenant.token -Body @{
+        ruleCode    = $src.ruleCode
+        title       = $src.title
+        network     = $src.network
+        reasonCode  = $src.reasonCode
+        sourceType  = $src.sourceType
+        headingPath = $src.headingPath
+        content     = $src.content
+    }
+    Write-Host "  Indexed policy playbook [$($ingested.ruleCode)] for tenant $($src.tenantKey)"
+}
+
 $results = @()
 
 foreach ($entry in $Data.disputes) {
     $tenant = $Data.tenants.($entry.tenantKey)
     $token = $tenant.token
 
-    # 1. File dispute idempotently, then read live state before transitioning
+    # 2. File dispute idempotently, then read live state before transitioning
     $case = Invoke-GatewayJson -Method "POST" -Path "/api/v1/disputes" -Token $token `
         -ExtraHeaders @{ "Idempotency-Key" = $entry.idempotencyKey } -Body $entry.payload
     $caseId = $case.id
     $case = Invoke-GatewayJson -Method "GET" -Path "/api/v1/disputes/$caseId" -Token $token
 
-    # 2. Transition state if still FILED
     if ($case.state -eq "FILED" -and $entry.transitionTargetState) {
         $case = Invoke-GatewayJson -Method "PATCH" -Path "/api/v1/disputes/$caseId/state" -Token $token `
             -Body @{ targetState = $entry.transitionTargetState }
@@ -64,6 +80,7 @@ foreach ($entry in $Data.disputes) {
     # 4. Presign + extract/redact evidence documents
     $extractedCount = 0
     $maskedPans = 0
+    $evidenceSummaries = @()
     foreach ($doc in $entry.evidence) {
         $ticket = Invoke-GatewayJson -Method "POST" -Path "/api/v1/documents/presign" -Token $token `
             -Body @{
@@ -82,8 +99,8 @@ foreach ($entry in $Data.disputes) {
             }
         $extractedCount++
         $maskedPans += $extracted.maskedPanCount
+        $evidenceSummaries += [string]$extracted.redactedText
 
-        # Notify timeline on first ingestion (inbox deduplication prevents duplicates on re-runs)
         $null = Invoke-GatewayJson -Method "POST" -Path "/api/v1/notifications/events" -Token $token `
             -Body @{
                 eventId     = "tl-$($extracted.id)"
@@ -114,18 +131,37 @@ foreach ($entry in $Data.disputes) {
         }
     }
 
+    # 6. Execute stateful LangGraph4j AI triage recommendation via Gateway -> Agent -> Knowledge
+    $triageResp = Invoke-GatewayJson -Method "POST" -Path "/api/v1/agent/triage" -Token $token -Body @{
+        caseId            = $caseId
+        externalReference = $case.externalReference
+        reasonCode        = $case.reasonCode
+        amountCents       = $case.amountCents
+        currency          = $case.currency
+        merchantName      = $case.merchantName
+        cardholderClaim   = $case.cardholderClaim
+        evidenceCount     = $extractedCount
+        evidenceSummaries = $evidenceSummaries
+    }
+
     $results += [PSCustomObject]@{
         Tenant       = $entry.tenantKey
-        CaseId       = $caseId
         Reference    = $case.externalReference
+        ReasonCode   = $case.reasonCode
         State        = $case.state
         OutboxEvents = $outbox.events.Count
-        Documents    = $extractedCount
+        Docs         = $extractedCount
         MaskedPANs   = $maskedPans
         DlqReplay    = $replayedStatus
+        AiDecision   = $triageResp.decision
+        Groundedness = $triageResp.groundednessScore
     }
 }
 
+# 7. Run CI Golden Eval Suite through gateway
+$evalReport = Invoke-GatewayJson -Method "POST" -Path "/api/v1/agent/evals/run" -Token $Data.tenants.alpha.token
 Write-Host ""
 $results | Format-Table -AutoSize
-Write-Host "Demo seeding complete! Open http://localhost:5173 or run Invoke-RestMethod against $GatewayUrl"
+Write-Host ("Golden Eval Suite -> Cases: {0}, Accuracy: {1:P0}, Recall@5: {2:P0}, CitationPrecision: {3:P0}, Groundedness: {4:P0}, Passed: {5}" -f `
+    $evalReport.totalCases, $evalReport.decisionAccuracy, $evalReport.retrievalRecallAt5, $evalReport.citationPrecision, $evalReport.averageGroundedness, $evalReport.passedGate)
+Write-Host "Demo seeding complete! Open http://localhost:5173 or inspect via $GatewayUrl"

@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 & (Join-Path $Root "diq-standards\scripts\ensure-toolchain.ps1")
 
 # Clear any previous DisputeIQ listeners so every port binds cleanly
-foreach ($port in @(8080, 8081, 8082, 8083, 8086, 8087, 5173)) {
+foreach ($port in @(8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 5173)) {
     $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
     foreach ($conn in $listeners) {
         if ($conn.OwningProcess -gt 4) {
@@ -51,6 +51,8 @@ $services = @(
     @{ Name = "diq-tenant-service";       Port = 8081 }
     @{ Name = "diq-dispute-service";      Port = 8082 }
     @{ Name = "diq-document-service";     Port = 8083 }
+    @{ Name = "diq-knowledge-service";    Port = 8084 }
+    @{ Name = "diq-agent-service";        Port = 8085 }
     @{ Name = "diq-notification-service"; Port = 8086 }
     @{ Name = "diq-gateway";              Port = 8080 }
     @{ Name = "diq-network-simulator";    Port = 8087 }
@@ -97,6 +99,8 @@ $endpoints = @(
     @{ Name = "diq-tenant-service";       Url = "http://localhost:8081/actuator/health" }
     @{ Name = "diq-dispute-service";      Url = "http://localhost:8082/actuator/health" }
     @{ Name = "diq-document-service";     Url = "http://localhost:8083/actuator/health" }
+    @{ Name = "diq-knowledge-service";    Url = "http://localhost:8084/actuator/health" }
+    @{ Name = "diq-agent-service";        Url = "http://localhost:8085/actuator/health" }
     @{ Name = "diq-notification-service"; Url = "http://localhost:8086/actuator/health" }
     @{ Name = "diq-gateway";              Url = "http://localhost:8080/actuator/health" }
     @{ Name = "diq-network-simulator";    Url = "http://localhost:8087/actuator/health" }
@@ -130,6 +134,8 @@ Write-Host "  API Gateway:          http://localhost:8080"
 Write-Host "  Tenant Service:       http://localhost:8081"
 Write-Host "  Dispute Service:      http://localhost:8082"
 Write-Host "  Document Service:     http://localhost:8083"
+Write-Host "  Knowledge Service:    http://localhost:8084"
+Write-Host "  Agent Service:        http://localhost:8085"
 Write-Host "  Notification Service: http://localhost:8086"
 Write-Host "  Network Simulator:    http://localhost:8087"
 Write-Host "Logs: $LogDir"

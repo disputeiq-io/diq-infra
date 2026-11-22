@@ -20,7 +20,7 @@ if (Test-Path $PidFile) {
 }
 
 # Also clear any orphaned listeners on DisputeIQ local ports
-foreach ($port in @(8080, 8081, 8082, 8083, 8086, 8087, 5173)) {
+foreach ($port in @(8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 5173)) {
     $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
     foreach ($conn in $listeners) {
         if ($conn.OwningProcess -gt 4) {

@@ -9,6 +9,28 @@
       "token": "dev-token-beta"
     }
   },
+  "knowledgeSources": [
+    {
+      "tenantKey": "alpha",
+      "ruleCode": "PLAYBOOK-ALPHA-CE30",
+      "title": "Issuer Alpha Enterprise Cloud CE 3.0 Verification Playbook",
+      "network": "CARDNET_SYNTH",
+      "reasonCode": "10.4-CARD-ABSENT-FRAUD",
+      "sourceType": "TENANT_PLAYBOOK",
+      "headingPath": "Tenant Playbook > Issuer Alpha > Cloud Renewals",
+      "content": "For cloud infrastructure renewals above $250, combine CE 3.0 device fingerprint telemetry (contact: security@issuer-alpha.example) with historical OAuth2 SSO session logs on test PAN 4111-1111-1111-1111."
+    },
+    {
+      "tenantKey": "beta",
+      "ruleCode": "PLAYBOOK-BETA-TRANSIT-126",
+      "title": "Acquirer Beta Tap-to-Pay Duplicate Terminal Settlement Rule",
+      "network": "CARDNET_SYNTH",
+      "reasonCode": "12.6-DUPLICATE-PROCESSING",
+      "sourceType": "TENANT_PLAYBOOK",
+      "headingPath": "Tenant Playbook > Acquirer Beta > Transit Terminals",
+      "content": "When two contactless tap authorizations share Terminal ID T4B-01 within 90 seconds, verify distinct ride trip IDs before representment; otherwise accept liability immediately."
+    }
+  ],
   "disputes": [
     {
       "tenantKey": "alpha",
@@ -32,9 +54,9 @@
         },
         {
           "idempotencyKey": "demo-seed-alpha-doc-2",
-          "documentType": "TRACKING",
-          "fileName": "ups-delivery-proof.txt",
-          "rawText": "Merchant: CloudScale Hosting Co\nOrder ID: ORD-2026-9042\nTracking: TRK-UPS-8841209\nDelivery Status: SIGNED_AT_FRONT_DESK"
+          "documentType": "TERMS_OF_SERVICE",
+          "fileName": "ce30-device-telemetry.txt",
+          "rawText": "Merchant: CloudScale Hosting Co\nOrder ID: ORD-2026-9042\nPrior Undisputed Txn #1: ORD-2026-7100 (95 days prior, same Device ID dfp_99281a, IP 198.51.100.42)\nPrior Undisputed Txn #2: ORD-2026-7890 (62 days prior, same Device ID dfp_99281a, AVS=Y, CVV=M)"
         }
       ],
       "dlqSimulation": {
@@ -45,6 +67,45 @@
       }
     },
     {
+      "tenantKey": "alpha",
+      "idempotencyKey": "demo-seed-alpha-case-2",
+      "payload": {
+        "externalReference": "VROL-DEMO-2026-1002",
+        "cardNetwork": "CARDNET_SYNTH",
+        "reasonCode": "13.1-MERCHANDISE-NOT-RECEIVED",
+        "amountCents": 129900,
+        "currency": "USD",
+        "merchantName": "Nordic Electronics Retail",
+        "cardholderClaim": "Order marked delivered, cardholder reports parcel never arrived at front door."
+      },
+      "transitionTargetState": "EVIDENCE_COLLECTION",
+      "evidence": [
+        {
+          "idempotencyKey": "demo-seed-alpha-doc-3",
+          "documentType": "TRACKING",
+          "fileName": "ups-signed-pod-1002.txt",
+          "rawText": "Merchant: Nordic Electronics Retail\nOrder ID: ORD-2026-1002\nTracking: TRK-UPS-77319044\nTotal: $1299.00 USD\nSigned By: A. CARDHOLDER at AVS billing address\nContact: homeowner@issuer-alpha.example | (415) 555-0142"
+        }
+      ],
+      "dlqSimulation": null
+    },
+    {
+      "tenantKey": "alpha",
+      "idempotencyKey": "demo-seed-alpha-case-3",
+      "payload": {
+        "externalReference": "VROL-DEMO-2026-1003",
+        "cardNetwork": "CARDNET_SYNTH",
+        "reasonCode": "13.7-CANCELLED-RECURRING",
+        "amountCents": 29900,
+        "currency": "USD",
+        "merchantName": "StreamLine SaaS Analytics",
+        "cardholderClaim": "Subscription cancelled on Oct 14 prior to Nov 1 annual renewal billing."
+      },
+      "transitionTargetState": "EVIDENCE_COLLECTION",
+      "evidence": [],
+      "dlqSimulation": null
+    },
+    {
       "tenantKey": "beta",
       "idempotencyKey": "demo-seed-beta-case-1",
       "payload": {
@@ -53,8 +114,8 @@
         "reasonCode": "12.6-DUPLICATE-PROCESSING",
         "amountCents": 74250,
         "currency": "USD",
-        "merchantName": "Metro Transit Authority",
-        "cardholderClaim": "Single commuter pass purchase posted twice within 90 seconds."
+        "merchantName": "Metro Transit Pass",
+        "cardholderClaim": "Single commuter pass tap settled twice within 90 seconds."
       },
       "transitionTargetState": "EVIDENCE_COLLECTION",
       "evidence": [
@@ -62,9 +123,25 @@
           "idempotencyKey": "demo-seed-beta-doc-1",
           "documentType": "CARDHOLDER_STATEMENT",
           "fileName": "transit-statement.txt",
-          "rawText": "Merchant: Metro Transit Authority\nOrder ID: MTA-55210\nTotal: $742.50 USD\nCard: 5500-0000-0000-0004\nContact: commuter@acquirer-beta.example | 212-555-0144"
+          "rawText": "Merchant: Metro Transit Pass\nInvoice: INV-MTA-55210\nTotal: $742.50 USD\nCard: 5500-0000-0000-0004\nNotes: Duplicate settlement on Terminal T4B same auth 88412A in settlement batch.\nContact: commuter@acquirer-beta.example | 212-555-0144"
         }
       ],
+      "dlqSimulation": null
+    },
+    {
+      "tenantKey": "beta",
+      "idempotencyKey": "demo-seed-beta-case-2",
+      "payload": {
+        "externalReference": "VROL-DEMO-2026-2002",
+        "cardNetwork": "CARDNET_SYNTH",
+        "reasonCode": "10.4-CARD-ABSENT-FRAUD",
+        "amountCents": 38900,
+        "currency": "USD",
+        "merchantName": "Lumiere Digital Gift Cards",
+        "cardholderClaim": "Account takeover purchased instant digital vouchers from unrecognized IP."
+      },
+      "transitionTargetState": "EVIDENCE_COLLECTION",
+      "evidence": [],
       "dlqSimulation": null
     }
   ]
