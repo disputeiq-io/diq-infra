@@ -40,6 +40,35 @@ function Invoke-GatewayJson {
     return ($resp.Content | ConvertFrom-Json)
 }
 
+function Advance-CaseToState {
+    param(
+        [object]$CaseObj,
+        [string]$TargetState,
+        [string]$Token
+    )
+    if ([string]::IsNullOrWhiteSpace($TargetState)) {
+        return $CaseObj
+    }
+
+    $stepOrder = @("FILED", "EVIDENCE_COLLECTION", "AI_TRIAGE", "AWAITING_REVIEW")
+    $targetIdx = [Array]::IndexOf($stepOrder, $TargetState)
+    if ($targetIdx -lt 0) {
+        return $CaseObj
+    }
+
+    $current = $CaseObj
+    while ($true) {
+        $currIdx = [Array]::IndexOf($stepOrder, [string]$current.state)
+        if ($currIdx -lt 0 -or $currIdx -ge $targetIdx) {
+            break
+        }
+        $nextState = $stepOrder[$currIdx + 1]
+        $current = Invoke-GatewayJson -Method "PATCH" -Path "/api/v1/disputes/$($current.id)/state" `
+            -Token $Token -Body @{ targetState = $nextState }
+    }
+    return $current
+}
+
 Write-Host "Seeding DisputeIQ Phase 1-4 sample data via $GatewayUrl ..."
 
 # 1. Ingest custom tenant knowledge playbooks (with PAN/PII redaction)
@@ -143,6 +172,13 @@ foreach ($entry in $Data.disputes) {
         evidenceCount     = $extractedCount
         evidenceSummaries = $evidenceSummaries
     }
+
+    # 7. Advance case legally through AI_TRIAGE -> AWAITING_REVIEW when evidence/triage is ready
+    $postTriageTarget = [string]$entry.postTriageTargetState
+    if (-not [string]::IsNullOrWhiteSpace($postTriageTarget)) {
+        $case = Advance-CaseToState -CaseObj $case -TargetState $postTriageTarget -Token $token
+    }
+    $outbox = Invoke-GatewayJson -Method "GET" -Path "/api/v1/disputes/$caseId/events" -Token $token
 
     $results += [PSCustomObject]@{
         Tenant       = $entry.tenantKey

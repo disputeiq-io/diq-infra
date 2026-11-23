@@ -45,6 +45,7 @@
         "cardholderClaim": "Cardholder denies authorizing recurring enterprise cloud renewal."
       },
       "transitionTargetState": "EVIDENCE_COLLECTION",
+      "postTriageTargetState": "AWAITING_REVIEW",
       "evidence": [
         {
           "idempotencyKey": "demo-seed-alpha-doc-1",
@@ -79,6 +80,7 @@
         "cardholderClaim": "Order marked delivered, cardholder reports parcel never arrived at front door."
       },
       "transitionTargetState": "EVIDENCE_COLLECTION",
+      "postTriageTargetState": "AWAITING_REVIEW",
       "evidence": [
         {
           "idempotencyKey": "demo-seed-alpha-doc-3",
@@ -102,6 +104,7 @@
         "cardholderClaim": "Subscription cancelled on Oct 14 prior to Nov 1 annual renewal billing."
       },
       "transitionTargetState": "EVIDENCE_COLLECTION",
+      "postTriageTargetState": "EVIDENCE_COLLECTION",
       "evidence": [],
       "dlqSimulation": null
     },
@@ -118,6 +121,7 @@
         "cardholderClaim": "Single commuter pass tap settled twice within 90 seconds."
       },
       "transitionTargetState": "EVIDENCE_COLLECTION",
+      "postTriageTargetState": "AWAITING_REVIEW",
       "evidence": [
         {
           "idempotencyKey": "demo-seed-beta-doc-1",
@@ -141,6 +145,7 @@
         "cardholderClaim": "Account takeover purchased instant digital vouchers from unrecognized IP."
       },
       "transitionTargetState": "EVIDENCE_COLLECTION",
+      "postTriageTargetState": "EVIDENCE_COLLECTION",
       "evidence": [],
       "dlqSimulation": null
     }
